@@ -1,0 +1,9 @@
+# depslib dependency file v1.0
+1479747144 source:d:\inf\techprog\3k\laba2\main.cpp
+	<iostream>
+	<windows.h>
+	"semaphor.h"
+
+1479746533 d:\inf\techprog\3k\laba2\semaphor.h
+	<windows.h>
+
