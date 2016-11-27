@@ -1,11 +1,13 @@
 #include <iostream>
 #include <windows.h>
 #include "semaphor.h"
-#define MAX_THREADS 5
+#define MAX_THREADS 10
 
 using namespace std;
 
 //DWORD WINAPI threadFunction( LPVOID lpParam );
+
+Semaphor *s = new Semaphor(3);
 
 int main()
 {
@@ -20,7 +22,7 @@ int main()
             threadFunction,       // thread function name
             (LPVOID)i,          // argument to thread function
             0,                      // use default creation flags
-            /*&dwThreadIdArray[i])*/NULL);   // returns the thread identifier
+            &dwThreadIdArray[i]);   // returns the thread identifier
 
         if (hThreadArray[i] == NULL)
            ExitProcess(3);

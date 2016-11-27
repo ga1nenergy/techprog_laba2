@@ -33,6 +33,8 @@
 			<Add option="-fexceptions" />
 		</Compiler>
 		<Unit filename="main.cpp" />
+		<Unit filename="semaphor.cpp" />
+		<Unit filename="semaphor.h" />
 		<Extensions>
 			<code_completion />
 			<envvars />

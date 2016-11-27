@@ -2,56 +2,80 @@
 #include <windows.h>
 #include <tchar.h>
 #include <strsafe.h>
+//#include <iostream>
+#include <string>
+#include <iostream>
 #define BUF_SIZE 255
 
 using namespace std;
+
+
 //Critical section
-/*void CriticalSection::lock()
+CriticalSection::CriticalSection()
 {
-    EnterCriticalSection(cs);
+    InitializeCriticalSection(&cs);
+    cout << "critical section initialized" << endl << endl;
+}
+
+CriticalSection::~CriticalSection()
+{
+    DeleteCriticalSection(&cs);
+    cout << "critical section deleted" << endl << endl;
+}
+
+void CriticalSection::lock()
+{
+    EnterCriticalSection(&cs);
+    cout << "locked critical section" << endl << endl;
 }
 
 void CriticalSection::unlock()
 {
-    LeaveCriticalSection(cs);
+    LeaveCriticalSection(&cs);
+    cout << "unlocked critical section" << endl << endl;
 }
 
 //Semaphor
-Semaphor::Semaphor(int maxCount, std::string name = NULL) : maxCount(maxCount), count(0)
+Semaphor::Semaphor(int maxCount) : maxCount(maxCount), count(0)
 {
-    char* c_name = new char;
-    if (name)
-        c_name = name.c_str();
-    cs = new CriticalScetion();
-    evnt = new Event(
+    cs = new CriticalSection();
+    evnt = CreateEvent(
             NULL,
             TRUE,
-            FASLE,
-            TEXT(c_name);
+            FALSE,
+            TEXT("MyEvent"));
+}
+
+Semaphor::~Semaphor()
+{
+    delete cs;
 }
 
 void Semaphor::lock()
 {
     cs->lock();
-    count++;
-    if (count < maxCount)
+    if ((count++) <= maxCount)
     {
-        cs->unlock()
+        cs->unlock();
+        cout << "unlocked. count: " << count << endl;
         return;
     }
-    cs->unlock();
-    evnt->Wait()
+    WaitForSingleObject(evnt, INFINITE);
+    cout << "im here" << endl;
 }
 
 void Semaphor::unlock()
 {
     cs->lock();
-    if ((count--) >= maxCount)
+    if ((count--) <= maxCount)
     {
-        evnt->Set();
         cs->unlock();
+        SetEvent(evnt);
+        //ResetEvent(evnt);
+        return;
     }
-}*/
+    cout << "locked. count: " << count << endl;
+}
 
 DWORD WINAPI threadFunction(LPVOID lpParam)
 {
@@ -61,6 +85,9 @@ DWORD WINAPI threadFunction(LPVOID lpParam)
     TCHAR msgBuf[BUF_SIZE];
     size_t cchStringSize;
     DWORD dwChars;
+    extern Semaphor *s;
+
+    s->lock();
 
     // Make sure there is a console to receive output results.
 
@@ -70,7 +97,7 @@ DWORD WINAPI threadFunction(LPVOID lpParam)
 
     // Cast the parameter to the correct data type.
 
-    int sleepTime = (int)lpParam;
+    int sleepTime = (int)lpParam * 1000; //ms to sec
 
     // Print the parameter values using thread-safe functions.
 
@@ -83,5 +110,10 @@ DWORD WINAPI threadFunction(LPVOID lpParam)
         (int)GetCurrentThreadId());
     StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
     WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
+    /*cout << "Thread name: " << (int)GetCurrentThreadId() << endl << "Sleep time = " << sleepTime << endl << "Preparing to fall asleep...\n";
+    Sleep(sleepTime);
+    cout << "Thread " << (int)GetCurrentThreadId() << " had a good snap" << endl;*/
+    s->unlock();
+
     return 0;
 }

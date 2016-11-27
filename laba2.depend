@@ -7,3 +7,20 @@
 1479746533 d:\inf\techprog\3k\laba2\semaphor.h
 	<windows.h>
 
+1479828795 source:d:\inf\techprog\3k\techprog_laba2\main.cpp
+	<iostream>
+	<windows.h>
+	"semaphor.h"
+
+1479829825 d:\inf\techprog\3k\techprog_laba2\semaphor.h
+	<windows.h>
+	<string>
+
+1479830504 source:d:\inf\techprog\3k\techprog_laba2\semaphor.cpp
+	"semaphor.h"
+	<windows.h>
+	<tchar.h>
+	<strsafe.h>
+	<string>
+	<iostream>
+
