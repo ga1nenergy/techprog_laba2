@@ -13,26 +13,44 @@ using namespace std;
 //Critical section
 CriticalSection::CriticalSection()
 {
+    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
     InitializeCriticalSection(&cs);
-    cout << "critical section initialized" << endl << endl;
+    //cout << "critical section initialized" << endl << endl;
+    print(hStdout, "critical section initialized\n");
 }
 
 CriticalSection::~CriticalSection()
 {
+    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
     DeleteCriticalSection(&cs);
-    cout << "critical section deleted" << endl << endl;
+    print(hStdout, "critical section deleted\n");
 }
 
 void CriticalSection::lock()
 {
+    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
     EnterCriticalSection(&cs);
-    cout << "locked critical section" << endl << endl;
+    //cout << "locked critical section" << endl << endl;
+    print(hStdout, "locked critical section\n");
 }
 
 void CriticalSection::unlock()
 {
+    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
     LeaveCriticalSection(&cs);
-    cout << "unlocked critical section" << endl << endl;
+    //cout << "unlocked critical section" << endl << endl;
+    print(hStdout, "unlocked critical section\n");
+}
+
+void CriticalSection::print(HANDLE hStdout, std::string s)
+{
+    TCHAR msgBuf[BUF_SIZE];
+    DWORD dwChars;
+    size_t cchStringSize;
+
+    StringCchPrintf(msgBuf, BUF_SIZE, TEXT(s.c_str()));
+    StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
+    WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
 }
 
 //Semaphor
@@ -53,15 +71,32 @@ Semaphor::~Semaphor()
 
 void Semaphor::lock()
 {
+    HANDLE hStdout;
+    TCHAR msgBuf[BUF_SIZE];
+    DWORD dwChars;
+    size_t cchStringSize;
+
+    hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+
     cs->lock();
     if ((count++) <= maxCount)
     {
         cs->unlock();
-        cout << "unlocked. count: " << count << endl;
+        //cout << "unlocked. count: " << count << endl;
+        StringCchPrintf(msgBuf, BUF_SIZE, TEXT("(lock()) CS is unlocked, total number of threads: %i\n"),
+        count);
+        StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
+        WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
         return;
     }
+
+    StringCchPrintf(msgBuf, BUF_SIZE, TEXT("(lock()) CS is locked, total number of threads: %i. Waiting for event\n"),
+    count);
+    StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
+    WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
+
     WaitForSingleObject(evnt, INFINITE);
-    cout << "im here" << endl;
+    //cout << "im here" << endl;
 }
 
 void Semaphor::unlock()
@@ -74,7 +109,18 @@ void Semaphor::unlock()
         //ResetEvent(evnt);
         return;
     }
-    cout << "locked. count: " << count << endl;
+
+    HANDLE hStdout;
+    TCHAR msgBuf[BUF_SIZE];
+    DWORD dwChars;
+    size_t cchStringSize;
+
+    hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+
+    StringCchPrintf(msgBuf, BUF_SIZE, TEXT("(unlock()) CS is locked, total number of threads: %i\n"),
+        count);
+    StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
+    WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
 }
 
 DWORD WINAPI threadFunction(LPVOID lpParam)

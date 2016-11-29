@@ -14,6 +14,7 @@ public:
     ~CriticalSection();
     void unlock();
     void lock();
+    void print(HANDLE hStdout, std::string s);
 };
 
 class Semaphor

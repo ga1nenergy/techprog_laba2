@@ -16,6 +16,7 @@ int main()
 
     for (int i = 0; i < MAX_THREADS; i++)
     {
+        cout << "number of step: " << i << endl << endl;
         hThreadArray[i] = CreateThread(
             NULL,                   // default security attributes
             0,                      // use default stack size
