@@ -1,165 +1,119 @@
+//#include "stdafx.h"
 #include "semaphor.h"
-#include <windows.h>
-#include <tchar.h>
-#include <strsafe.h>
-//#include <iostream>
 #include <string>
 #include <iostream>
+#include<sstream>
 #define BUF_SIZE 255
 
 using namespace std;
 
+template <typename T>
+std::string to_string(T value)
+{
+	//create an output string stream
+	std::ostringstream os;
+
+	//throw the value into the string stream
+	os << value;
+
+	//convert the string stream into a string and return
+	return os.str();
+}
+
+//ConsoleOutput
+ConsoleOutput::ConsoleOutput() { InitializeCriticalSection(&cs); }
+ConsoleOutput::~ConsoleOutput() { DeleteCriticalSection(&cs); }
+
+void ConsoleOutput::print(std::string str)
+{
+	EnterCriticalSection(&cs);
+	cout << str << endl << endl;
+	LeaveCriticalSection(&cs);
+}
 
 //Critical section
 CriticalSection::CriticalSection()
 {
-    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    InitializeCriticalSection(&cs);
-    //cout << "critical section initialized" << endl << endl;
-    print(hStdout, "critical section initialized\n");
+	InitializeCriticalSection(&cs);
+	CO->print("critical section initialized\n");
 }
 
 CriticalSection::~CriticalSection()
 {
-    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    DeleteCriticalSection(&cs);
-    print(hStdout, "critical section deleted\n");
+	DeleteCriticalSection(&cs);
+	CO->print("critical section deleted\n");
 }
 
 void CriticalSection::lock()
 {
-    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    EnterCriticalSection(&cs);
-    //cout << "locked critical section" << endl << endl;
-    print(hStdout, "locked critical section\n");
+	EnterCriticalSection(&cs);
+	CO->print("locked critical section\n");
 }
 
 void CriticalSection::unlock()
 {
-    HANDLE hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    LeaveCriticalSection(&cs);
-    //cout << "unlocked critical section" << endl << endl;
-    print(hStdout, "unlocked critical section\n");
-}
-
-void CriticalSection::print(HANDLE hStdout, std::string s)
-{
-    TCHAR msgBuf[BUF_SIZE];
-    DWORD dwChars;
-    size_t cchStringSize;
-
-    StringCchPrintf(msgBuf, BUF_SIZE, TEXT(s.c_str()));
-    StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
-    WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
+	LeaveCriticalSection(&cs);
+	CO->print("unlocked critical section\n");
 }
 
 //Semaphor
 Semaphor::Semaphor(int maxCount) : maxCount(maxCount), count(0)
 {
-    cs = new CriticalSection();
-    evnt = CreateEvent(
-            NULL,
-            TRUE,
-            FALSE,
-            TEXT("MyEvent"));
+	cs = new CriticalSection();
+	cs_unlock_evnt = CreateEvent(
+		NULL,
+		TRUE,
+		FALSE,
+		TEXT("cs_unlock_evnt"));
 }
 
 Semaphor::~Semaphor()
 {
-    delete cs;
+	delete cs;
 }
 
 void Semaphor::lock()
 {
-    HANDLE hStdout;
-    TCHAR msgBuf[BUF_SIZE];
-    DWORD dwChars;
-    size_t cchStringSize;
+	cs->lock();
+	count++;
+	if ((count) <= maxCount)
+	{
+		CO->print(string("(lock()) CS is unlocked, total number of threads: ") + to_string(count) + to_string("\n"));
+		cs->unlock();
+		return;
+	}
 
-    hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
+	CO->print(string("(lock()) CS is locked, total number of threads: ") + to_string(count) + string(". Waiting for event\n"));
 
-    cs->lock();
-    if ((count++) <= maxCount)
-    {
-        cs->unlock();
-        //cout << "unlocked. count: " << count << endl;
-        StringCchPrintf(msgBuf, BUF_SIZE, TEXT("(lock()) CS is unlocked, total number of threads: %i\n"),
-        count);
-        StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
-        WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
-        return;
-    }
-
-    StringCchPrintf(msgBuf, BUF_SIZE, TEXT("(lock()) CS is locked, total number of threads: %i. Waiting for event\n"),
-    count);
-    StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
-    WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
-
-    WaitForSingleObject(evnt, INFINITE);
-    //cout << "im here" << endl;
+	WaitForSingleObject(cs_unlock_evnt, INFINITE);
 }
 
 void Semaphor::unlock()
 {
-    cs->lock();
-    if ((count--) <= maxCount)
-    {
-        cs->unlock();
-        SetEvent(evnt);
-        //ResetEvent(evnt);
-        return;
-    }
+	cs->lock();
+	count--;
+	if ((count) <= maxCount)
+	{
+		cs->unlock();
+		SetEvent(cs_unlock_evnt);
+		return;
+	}
 
-    HANDLE hStdout;
-    TCHAR msgBuf[BUF_SIZE];
-    DWORD dwChars;
-    size_t cchStringSize;
-
-    hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-
-    StringCchPrintf(msgBuf, BUF_SIZE, TEXT("(unlock()) CS is locked, total number of threads: %i\n"),
-        count);
-    StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
-    WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
+	CO->print("(unlock()) CS is locked, total number of threads: " + to_string(count));
 }
 
 DWORD WINAPI threadFunction(LPVOID lpParam)
 {
-    HANDLE hStdout;
-    int sleepTIme;
+	//WaitForSingleObject(all_threads_created_evnt, INFINITE);
+	s->lock();
 
-    TCHAR msgBuf[BUF_SIZE];
-    size_t cchStringSize;
-    DWORD dwChars;
-    extern Semaphor *s;
+	int sleepTime = (int)lpParam /** 1000*/; //ms to sec
 
-    s->lock();
+	CO->print(string("Thread name:") + to_string((int)GetCurrentThreadId()) + string("\nSleep time = ") + to_string(sleepTime) + string("\nPreparing to fall asleep...\n"));
+	Sleep(sleepTime);
+	CO->print(string("Thread ") + to_string((int)GetCurrentThreadId()) + string(" had a good snap\n"));
 
-    // Make sure there is a console to receive output results.
+	s->unlock();
 
-    hStdout = GetStdHandle(STD_OUTPUT_HANDLE);
-    if( hStdout == INVALID_HANDLE_VALUE )
-        return 1;
-
-    // Cast the parameter to the correct data type.
-
-    int sleepTime = (int)lpParam * 1000; //ms to sec
-
-    // Print the parameter values using thread-safe functions.
-
-    StringCchPrintf(msgBuf, BUF_SIZE, TEXT("Thread name: %i\nSleep time = %i\nPreparing to fall asleep...\n"),
-        (int)GetCurrentThreadId(), sleepTime);
-    StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
-    WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
-    Sleep(sleepTime);
-    StringCchPrintf(msgBuf, BUF_SIZE, TEXT("Thread %i had a good snap\n"),
-        (int)GetCurrentThreadId());
-    StringCchLength(msgBuf, BUF_SIZE, &cchStringSize);
-    WriteConsole(hStdout, msgBuf, (DWORD)cchStringSize, &dwChars, NULL);
-    /*cout << "Thread name: " << (int)GetCurrentThreadId() << endl << "Sleep time = " << sleepTime << endl << "Preparing to fall asleep...\n";
-    Sleep(sleepTime);
-    cout << "Thread " << (int)GetCurrentThreadId() << " had a good snap" << endl;*/
-    s->unlock();
-
-    return 0;
+	return 0;
 }
