@@ -2,7 +2,7 @@
 #include <iostream>
 #include <windows.h>
 #include "semaphor.h"
-#define MAX_THREADS 10
+#define MAX_THREADS 20
 #define BUF_SIZE 255
 
 using namespace std;
