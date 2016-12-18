@@ -24,8 +24,6 @@ std::string to_string(T value)
 ConsoleOutput::ConsoleOutput() { InitializeCriticalSection(&cs); }
 ConsoleOutput::~ConsoleOutput() { DeleteCriticalSection(&cs); }
 
-//extern ConsoleOutput* CO;
-
 void ConsoleOutput::print(std::string str)
 {
 	EnterCriticalSection(&cs);
@@ -37,25 +35,21 @@ void ConsoleOutput::print(std::string str)
 CriticalSection::CriticalSection()
 {
 	InitializeCriticalSection(&cs);
-	//CO->print("critical section initialized\n");
 }
 
 CriticalSection::~CriticalSection()
 {
 	DeleteCriticalSection(&cs);
-	//CO->print("critical section deleted\n");
 }
 
 void CriticalSection::lock()
 {
 	EnterCriticalSection(&cs);
-	//CO->print("locked critical section\n");
 }
 
 void CriticalSection::unlock()
 {
 	LeaveCriticalSection(&cs);
-	//CO->print("unlocked critical section\n");
 }
 
 //Semaphor
@@ -86,12 +80,9 @@ void Semaphor::lock()
 		cs->unlock();
 		return;
 	}
-	else
-    {
-        CO->print(string("(lock()) CS is locked, total number of threads: ") + to_string(count) + string(". Waiting for event\n"));
-        cs->unlock();
-        WaitForSingleObject(cs_unlock_evnt, INFINITE);
-    }
+    CO->print(string("(lock()) CS is locked, total number of threads: ") + to_string(count) + string(". Waiting for event\n"));
+    cs->unlock();
+    WaitForSingleObject(cs_unlock_evnt, INFINITE);
 }
 
 void Semaphor::unlock()
@@ -99,24 +90,20 @@ void Semaphor::unlock()
 	cs->lock();
 
     count--;
-
-	if ((count) <= maxCount)
-	{
-		SetEvent(cs_unlock_evnt);
-		cs->unlock();
-		return;
-	}
-	else
-    {
-        CO->print("(unlock()) CS is locked, total number of threads: " + to_string(count));
-        cs->unlock();
-	}
-
+    if (count != 0)
+        if (((count) <= maxCount) && (count != 0))
+        {
+            SetEvent(cs_unlock_evnt);
+            cs->unlock();
+            return;
+        }
+        else
+            CO->print("(unlock()) CS is locked, total number of threads: " + to_string(count));
+	cs->unlock();
 }
 
 DWORD WINAPI threadFunction(LPVOID lpParam)
 {
-	//WaitForSingleObject(all_threads_created_evnt, INFINITE);
 	s->lock();
 
 	int sleepTime = (int)lpParam * 100; //ms to sec
